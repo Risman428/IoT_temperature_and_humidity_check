@@ -3,16 +3,20 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Bootstrap demo</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <title>Monitoring DHT22 Sensor</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
         <style>
-            /* 🌈 Background gradient & card styling */
+            /* 🌈 Background gradient & animation */
             body {
                 background: linear-gradient(135deg, #4f46e5, #9333ea, #3b82f6);
                 background-size: 300% 300%;
                 animation: gradientShift 10s ease infinite;
                 color: white;
                 min-height: 100vh;
+                font-family: "Poppins", sans-serif;
+                overflow: hidden;
+                position: relative;
             }
 
             @keyframes gradientShift {
@@ -21,56 +25,141 @@
                 100% { background-position: 0% 50%; }
             }
 
+            /* 🌟 Floating particles */
+            .particle {
+                position: absolute;
+                width: 8px;
+                height: 8px;
+                background: rgba(255,255,255,0.3);
+                border-radius: 50%;
+                animation: float 10s infinite ease-in-out;
+            }
+            @keyframes float {
+                0% { transform: translateY(0) scale(1); opacity: 1; }
+                50% { transform: translateY(-80px) scale(1.3); opacity: 0.7; }
+                100% { transform: translateY(0) scale(1); opacity: 1; }
+            }
+
+            /* ✨ Card Styling */
             .card {
-                backdrop-filter: blur(10px);
-                border: none;
-                border-radius: 20px;
+                backdrop-filter: blur(20px);
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 25px;
                 color: white;
                 text-align: center;
-                padding: 20px;
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                padding: 35px 20px;
+                transition: transform 0.4s ease, box-shadow 0.4s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .card::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: -75%;
+                width: 50%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.2);
+                transform: skewX(-25deg);
+                transition: left 0.5s ease;
+            }
+
+            .card:hover::before {
+                left: 125%;
+            }
+
+            .card:hover {
+                transform: translateY(-8px) scale(1.03);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
             }
 
             /* 🌡️ Suhu (Temperature) */
             .card.temperature {
-                background: linear-gradient(135deg, rgba(255, 100, 50, 0.7), rgba(255, 150, 80, 0.6));
-                box-shadow: 0 8px 32px rgba(255, 120, 60, 0.3);
+                background: linear-gradient(145deg, rgba(255, 100, 50, 0.8), rgba(255, 150, 80, 0.7));
+                box-shadow: 0 8px 32px rgba(255, 120, 60, 0.4);
             }
 
             /* 💧 Kelembaban (Humidity) */
             .card.humidity {
-                background: linear-gradient(135deg, rgba(0, 150, 255, 0.6), rgba(80, 220, 255, 0.5));
-                box-shadow: 0 8px 32px rgba(0, 180, 255, 0.3);
+                background: linear-gradient(145deg, rgba(0, 150, 255, 0.8), rgba(80, 220, 255, 0.6));
+                box-shadow: 0 8px 32px rgba(0, 180, 255, 0.4);
             }
 
-            .card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            /* 🧊 Icons */
+            .icon {
+                font-size: 3.5rem;
+                margin-bottom: 10px;
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
             }
 
+            /* 🔢 Animasi angka */
+            #temperature, #humidity {
+                font-size: 2.8rem;
+                font-weight: 700;
+                display: inline-block;
+                min-width: 80px;
+                transition: all 0.5s ease-in-out;
+                text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.4);
+            }
+
+            /* 🌟 Heading */
             h1 {
                 font-weight: 700;
-                text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+                text-shadow: 3px 3px 15px rgba(0, 0, 0, 0.4);
+                letter-spacing: 1px;
+                margin-bottom: 2rem;
+            }
+
+            h5 {
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                margin-bottom: 10px;
+            }
+
+            .row .card {
+                max-width: 280px;
+            }
+
+            .container {
+                animation: fadeIn 1s ease-in-out;
+                position: relative;
+                z-index: 2;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
             }
         </style>
     </head>
     <body>
+        <!-- ✨ Particles (hiasan lembut) -->
+        <div class="particle" style="top:10%; left:20%; animation-delay:0s;"></div>
+        <div class="particle" style="top:30%; left:80%; animation-delay:2s;"></div>
+        <div class="particle" style="top:70%; left:50%; animation-delay:4s;"></div>
+        <div class="particle" style="top:50%; left:10%; animation-delay:6s;"></div>
+
         <div class="container py-5">
             <h1 class="text-center mb-3">Monitoring DHT22 Sensor</h1>
             <div class="row justify-content-center">
                 <div class="card col-3 mx-2 temperature">
+                    <i class="bi bi-thermometer-sun icon"></i>
                     <h5>Temperature</h5>
                     <p><span id="temperature"></span> °C</p>
                 </div>
                 <div class="card col-3 mx-2 humidity">
+                    <i class="bi bi-droplet-half icon"></i>
                     <h5>Humidity</h5>
                     <p><span id="humidity"></span> %</p>
                 </div>
             </div>
         </div>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             $(document).ready(function () {
                 function getData() {
