@@ -1,4 +1,4 @@
-#include <ESP8266Wifi.h>
+#include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>  //connecting webserver
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
@@ -10,7 +10,7 @@ const char* password = "12345678";
 //pastikan NodeMCU dan laptop memakai jaringan yang sama
 
 
-#define DHTPIN D3  // Digital pin connected to the DHT sensor | perubahan 2 => D3
+#define DHTPIN D1  // Digital pin connected to the DHT sensor | perubahan 2 => D3
 
 #define DHTTYPE DHT22  // DHT 22 (AM2302)
 
@@ -22,28 +22,28 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  // Connection to Wifi
+  // Connection to WiFi
   Serial.println();
-  Serial.println("Menghubungkan ke Wifi: ");
+  Serial.println("Menghubungkan ke WiFi: ");
   Serial.println(ssid);
-  Wifi.begin(ssid, password);
+  WiFi.begin(ssid, password);
 
-  while (Wifi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
 
   Serial.println();
-  Serial.println("Wifi is Connected");
+  Serial.println("WiFi is Connected");
   Serial.print("IP Adress : ");
-  Serial.println(Wifi.localIP());  //untuk mengetahui IP dari NodeMCU nya
+  Serial.println(WiFi.localIP());  //untuk mengetahui IP dari NodeMCU nya
 
   // Initialize device.
   dht.begin();
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
   dht.humidity().getSensor(&sensor);
-  delayMS = sensor.min_delay / 1000;
+  delayMS = 2000;
 }
 
 void loop() {
@@ -51,25 +51,6 @@ void loop() {
   delay(delayMS);
   // Get temperature event and print its value.
   sensors_event_t event;
-  // dht.temperature().getEvent(&event);
-  // if (isnan(event.temperature)) {
-  //   Serial.println(F("Error reading temperature!"));
-  // }
-  // else {
-  //   Serial.print(F("Temperature: "));
-  //   Serial.print(event.temperature);
-  //   Serial.println(F("°C"));
-  // }
-  // // Get humidity event and print its value.
-  // dht.humidity().getEvent(&event);
-  // if (isnan(event.relative_humidity)) {
-  //   Serial.println(F("Error reading humidity!"));
-  // }
-  // else {
-  //   Serial.print(F("Humidity: "));
-  //   Serial.print(event.relative_humidity);
-  //   Serial.println(F("%"));
-  // }
 
   //read temperature
   dht.temperature().getEvent(&event);
@@ -87,19 +68,19 @@ void loop() {
 
   Serial.print("Temperature: ");
   Serial.print(temperature);
-  Serial.println(" °C")
+  Serial.println(" °C");
 
   Serial.print("Humidity: ");
   Serial.print(humidity);
   Serial.println(" %");
 
   //sending data to Laravel
-  if (Wifi.status() == WL_CONNECTED) {
-    HTPPClient http;
-    WiFiClient client
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    WiFiClient client;
 
       //gunakan IP adress laptop sendiri
-      String url = "http://192.168.1.2/dhtiot/public/update-data/";
+      String url = "http://10.222.140.49/dhtiot/public/update-data/";
     url += String(temperature, 1) + "/" + String(humidity, 1);
 
     Serial.print("Mengirim data ke : ");
@@ -119,7 +100,7 @@ void loop() {
 
     http.end();
   } else {
-    Serial.println("Wifi tidak terkoneksi");
+    Serial.println("WiFi tidak terkoneksi");
     WiFi.reconnect();
   }
 
