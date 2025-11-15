@@ -129,6 +129,45 @@
                 z-index: 2;
             }
 
+            /* bagian tombol update dan history suhu */
+            .previous-target-box {
+                background: rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                padding: 12px 15px;
+                border-radius: 15px;
+                color: #fff;
+                margin-bottom: 15px;
+                text-align: center;
+                backdrop-filter: blur(10px);
+            }
+
+            .previous-target-value {
+                font-size: 1.6rem;
+                font-weight: 700;
+            }
+
+            .target-input {
+                border-radius: 15px !important;
+                font-weight: 600;
+                text-align: center;
+            }
+
+            .button-group {
+                display: flex;
+                gap: 10px;
+            }
+
+            .btn-update {
+                border-radius: 15px !important;
+                font-weight: 600;
+            }
+
+            .btn-reset {
+                border-radius: 15px !important;
+                font-weight: 600;
+            }
+
+
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(20px); }
                 to { opacity: 1; transform: translateY(0); }
@@ -156,6 +195,36 @@
                     <p><span id="humidity"></span> %</p>
                 </div>
             </div>
+            <div class="card p-4 mt-4" style="max-width:350px; margin:auto;">
+
+    <h5 class="mb-3">Set Target Suhu</h5>
+
+    {{-- INFORMASI TARGET SEBELUMNYA --}}
+    <div class="previous-target-box">
+        <strong>Target suhu sebelumnya:</strong><br>
+        <span class="previous-target-value">
+            {{ $dht->target_temperature ?? 'Belum ada data' }}
+        </span> °C
+    </div>
+
+    {{-- FORM UPDATE TARGET --}}
+    <form action="/control" method="POST">
+        @csrf
+        <input 
+            type="number" 
+            name="target_temperature"
+            class="form-control target-input"
+            placeholder="Masukkan suhu baru">
+
+        <div class="button-group mt-3">
+            <button type="submit" class="btn btn-light w-100 btn-update">
+                Update
+            </button>
+        </div>
+    </form>
+
+</div>
+
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -177,6 +246,20 @@
                 setInterval(() => {
                     getData();
                 }, 2000);
+            });
+        </script>
+        <script>
+            $("#btnSet").click(function () {
+                $.ajax({
+                    type: "POST",
+                    url: "/control",
+                    data: {
+                        target_temperature: $("#target").val(),
+                    },
+                    success: function () {
+                        alert("Suhu kontrol diperbarui!");
+                    }
+                });
             });
         </script>
     </body>
