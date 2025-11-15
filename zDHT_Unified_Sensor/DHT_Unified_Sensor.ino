@@ -1,108 +1,128 @@
 #include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>  //connecting webserver
+#include <ESP8266HTTPClient.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
 
-//confiruration wifi
-const char* ssid = "Y30i";
-const char* password = "12345678";
-//pastikan NodeMCU dan laptop memakai jaringan yang sama
+// WiFi config
+const char* ssid = "HANIF";
+const char* password = "H@n1f16_";
 
-
-#define DHTPIN D1  // Digital pin connected to the DHT sensor | perubahan 2 => D3
-
-#define DHTTYPE DHT22  // DHT 22 (AM2302)
+// Pin config
+#define DHTPIN D1
+#define DHTTYPE DHT22
+#define LEDPIN D2
 
 DHT_Unified dht(DHTPIN, DHTTYPE);
-
 uint32_t delayMS;
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  // Connection to WiFi
-  Serial.println();
-  Serial.println("Menghubungkan ke WiFi: ");
-  Serial.println(ssid);
+  Serial.println("Menghubungkan ke WiFi...");
   WiFi.begin(ssid, password);
-
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+  Serial.println("\nWiFi Connected!");
+  Serial.print("IP Address : ");
+  Serial.println(WiFi.localIP());
 
-  Serial.println();
-  Serial.println("WiFi is Connected");
-  Serial.print("IP Adress : ");
-  Serial.println(WiFi.localIP());  //untuk mengetahui IP dari NodeMCU nya
-
-  // Initialize device.
   dht.begin();
-  sensor_t sensor;
-  dht.temperature().getSensor(&sensor);
-  dht.humidity().getSensor(&sensor);
+  pinMode(LEDPIN, OUTPUT);
+  digitalWrite(LEDPIN, LOW);
+
   delayMS = 2000;
 }
 
 void loop() {
-  // Delay between measurements.
   delay(delayMS);
-  // Get temperature event and print its value.
-  sensors_event_t event;
 
-  //read temperature
-  dht.temperature().getEvent(&event);
-  float temperature = event.temperature;
+  // ---- 1️⃣ Baca Sensor ----
+  sensors_event_t tempEvent, humEvent;
+  dht.temperature().getEvent(&tempEvent);
+  dht.humidity().getEvent(&humEvent);
 
-  //read humidity
-  dht.humidity().getEvent(&event);
-  float humidity = event.relative_humidity;
+  float temperature = tempEvent.temperature;
+  float humidity = humEvent.relative_humidity;
 
-  //pengecekan DHT
   if (isnan(temperature) || isnan(humidity)) {
     Serial.println("Gagal membaca sensor DHT");
     return;
   }
 
   Serial.print("Temperature: ");
-  Serial.print(temperature);
-  Serial.println(" °C");
-
+  Serial.println(temperature);
   Serial.print("Humidity: ");
-  Serial.print(humidity);
-  Serial.println(" %");
+  Serial.println(humidity);
 
-  //sending data to Laravel
+  // ---- 2️⃣ KIRIM DATA SENSOR KE LARAVEL ----
   if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
     WiFiClient client;
+    HTTPClient http1;
 
-      //gunakan IP adress laptop sendiri
-      String url = "http://10.222.140.49/dhtiot/public/update-data/";
-    url += String(temperature, 1) + "/" + String(humidity, 1);
+    String url = "http://192.168.1.2/dhtiot/public/update-data/";
+    url += String(temperature) + "/" + String(humidity);
 
-    Serial.print("Mengirim data ke : ");
-    Serial.println(url);
+    http1.begin(client, url);
+    int code = http1.GET();
 
-    http.begin(client, url);
-    int httpCode = http.GET();
-
-    if (httpCode > 0) {
-      Serial.printf("HTTP Respone Code : %d\n", httpCode);
-      String payload = http.getString();
-      Serial.println("Response : ");
-      Serial.println(payload);
+    if (code > 0) {
+      Serial.println("Sensor sent to Laravel");
     } else {
-      Serial.printf("Gagal Mengirim data. Error : %s\n", http.errorToString(httpCode).c_str());
+      Serial.println("Gagal update-data");
     }
-
-    http.end();
-  } else {
-    Serial.println("WiFi tidak terkoneksi");
-    WiFi.reconnect();
+    http1.end();
   }
 
-  delay(3000);
+  // ---- 3️⃣ Ambil target suhu dari Laravel ----
+  float target = 0;
+
+  if (WiFi.status() == WL_CONNECTED) {
+    WiFiClient client2;
+    HTTPClient http2;
+
+    http2.begin(client2, "http://192.168.1.2/dhtiot/public/control");
+    int httpCode = http2.GET();
+
+    if (httpCode > 0) {
+      String payload = http2.getString();
+      Serial.println("Control Data: " + payload);
+
+      int index = payload.indexOf("target_temperature");
+      if (index != -1) {
+        int colon = payload.indexOf(":", index);
+        int comma = payload.indexOf(",", colon);
+
+        String value;
+
+        if (comma != -1)
+          value = payload.substring(colon + 1, comma);
+        else
+          value = payload.substring(colon + 1);
+
+        value.trim();
+        target = value.toFloat();
+
+        Serial.print("Target suhu dari web: ");
+        Serial.println(target);
+      }
+    } else {
+      Serial.println("Gagal ambil control");
+    }
+
+    http2.end();
+  }
+
+  // ---- 4️⃣ Penentuan LED final ----
+  bool autoLed = (temperature >= 28);   // Sensor ON ≥ 28
+  bool overrideLed = (target >= 28);    // Control Laravel ON ≥ 28
+  bool finalLed = autoLed || overrideLed;
+
+  digitalWrite(LEDPIN, finalLed ? HIGH : LOW);
+
+  Serial.println(finalLed ? "LED : ON" : "LED : OFF");
+  Serial.println("-------------------------------------");
 }
