@@ -5,8 +5,8 @@
 #include <DHT_U.h>
 
 // WiFi config
-const char* ssid = "HANIF";
-const char* password = "H@n1f16_";
+const char* ssid = "Y30i";
+const char* password = "12345678";
 
 // Pin config
 #define DHTPIN D1
@@ -63,7 +63,7 @@ void loop() {
     WiFiClient client;
     HTTPClient http1;
 
-    String url = "http://192.168.1.2/dhtiot/public/update-data/";
+    String url = "http://10.94.20.49/dhtiot/public/update-data/";
     url += String(temperature) + "/" + String(humidity);
 
     http1.begin(client, url);
@@ -84,7 +84,7 @@ void loop() {
     WiFiClient client2;
     HTTPClient http2;
 
-    http2.begin(client2, "http://192.168.1.2/dhtiot/public/control");
+    http2.begin(client2, "http://10.94.20.49/dhtiot/public/control");
     int httpCode = http2.GET();
 
     if (httpCode > 0) {
@@ -117,8 +117,8 @@ void loop() {
   }
 
   // ---- 4️⃣ Penentuan LED final ----
-  bool autoLed = (temperature >= 28);   // Sensor ON ≥ 28
-  bool overrideLed = (target >= 28);    // Control Laravel ON ≥ 28
+  bool autoLed = (temperature >= 30);   // Sensor ON ≥ 30
+  bool overrideLed = (target >= 30);    // Control Laravel ON ≥ 30
   bool finalLed = autoLed || overrideLed;
 
   digitalWrite(LEDPIN, finalLed ? HIGH : LOW);

@@ -14,7 +14,7 @@ class Dht22Controller extends Controller
             Dht22::create([
                 'temperature' => 0,
                 'humidity' => 0,
-                'target_temperature' => 28, // default target
+                'target_temperature' => 30, // default target
                 'lamp' => 'OFF'
             ]);
         }
@@ -78,7 +78,7 @@ class Dht22Controller extends Controller
         $dht = Dht22::first();
 
         return response()->json([
-            'target_temperature' => $dht ? $dht->target_temperature : 28,
+            'target_temperature' => $dht ? $dht->target_temperature : 30,
             'lamp' => $dht ? $dht->lamp : 'OFF'
         ]);
     }
