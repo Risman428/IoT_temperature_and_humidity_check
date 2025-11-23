@@ -65,6 +65,7 @@ class Dht22Controller extends Controller
             'target_temperature' => $dht->target_temperature,
             'led' => $dht->led,
             'buzzer' => $dht->buzzer,
+            'servo' => $dht->servo,
         ]);
     }
 
@@ -103,4 +104,25 @@ class Dht22Controller extends Controller
             'lamp' => $dht ? $dht->lamp : 'OFF'
         ]);
     }
+
+    //method control servo
+    public function servoControl()
+    {
+        $dht = Dht22::first();
+
+        return response()->json([
+            'servo' => $dht->servo ? 1 : 0
+        ]);
+    }
+    //Method update Servo
+    public function updateServo($status)
+    {
+        $dht = Dht22::first();
+
+        $dht->servo = $status == 1 ? 1 : 0;
+        $dht->save();
+
+        return response()->json(['message' => 'Servo updated']);
+    }
+
 }

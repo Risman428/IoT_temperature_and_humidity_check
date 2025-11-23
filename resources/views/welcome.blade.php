@@ -58,7 +58,7 @@
                 content: "";
                 position: absolute;
                 top: 0;
-                left: -75%;
+                left: -80%;
                 width: 50%;
                 height: 100%;
                 background: rgba(255, 255, 255, 0.2);
@@ -67,7 +67,7 @@
             }
 
             .card:hover::before {
-                left: 125%;
+                left: 130%;
             }
 
             .card:hover {
@@ -198,87 +198,123 @@
                     <p><span id="humidity"></span> %</p>
                 </div>
             </div>
-            <div class="card p-4 mt-4" style="max-width:350px; margin:auto;">
+            <div class="d-flex justify-content-center gap-3 mt-4">
+                <div class="card p-4" style="max-width:350px; flex:1;">
+                    <h5 class="mb-3">Set Target Suhu</h5>
+                    {{-- INFORMASI TARGET SEBELUMNYA --}}
+                    <div class="previous-target-box">
+                        <strong>Target suhu sebelumnya:</strong><br>
+                        <span class="previous-target-value">
+                            {{ $dht->target_temperature ?? 'Belum ada data' }}
+                        </span> °C
+                    </div>
+                    <!-- Container untuk LED dan Buzzer -->
+                    <h5 class="mb-3">Status LED & Buzzer</h5>
+                    <div class="led-buzzer-row">
+                        <div class="previous-target-box">
+                            <h5>LED</h5>
+                            <p><span id="ledStatus" class="previous-target-value"></span></p>
+                        </div>
 
-    <h5 class="mb-3">Set Target Suhu</h5>
+                        <div class="previous-target-box">
+                            <h5>Buzzer</h5>
+                            <p><span id="buzzerStatus" class="previous-target-value"></span></p>
+                        </div>
+                    </div>
 
-    {{-- INFORMASI TARGET SEBELUMNYA --}}
-    <div class="previous-target-box">
-        <strong>Target suhu sebelumnya:</strong><br>
-        <span class="previous-target-value">
-            {{ $dht->target_temperature ?? 'Belum ada data' }}
-        </span> °C
-    </div>
-    <!-- Container untuk LED dan Buzzer -->
-    <div class="led-buzzer-row">
-        <div class="previous-target-box">
-            <h5>LED</h5>
-            <p><span id="ledStatus" class="previous-target-value"></span></p>
-        </div>
+                    {{-- FORM UPDATE TARGET --}}
+                    <form action="/control" method="POST">
+                        @csrf
+                        <input 
+                            type="number" 
+                            name="target_temperature"
+                            class="form-control target-input"
+                            placeholder="Masukkan suhu baru">
 
-        <div class="previous-target-box">
-            <h5>Buzzer</h5>
-            <p><span id="buzzerStatus" class="previous-target-value"></span></p>
-        </div>
-    </div>
+                        <div class="button-group mt-3">
+                            <button type="submit" class="btn btn-light w-100 btn-update">
+                                Update
+                            </button>
+                        </div>
+                    </form>
+                </div>
 
+                <div class="card p-4" style="max-width:350px; flex:1;">
+                    <div class="previous-target-box mt-3">
+                        <h5>SERVO</h5>
+                        <p><span id="servoStatus" class="previous-target-value"></span></p>
 
-    {{-- FORM UPDATE TARGET --}}
-    <form action="/control" method="POST">
-        @csrf
-        <input 
-            type="number" 
-            name="target_temperature"
-            class="form-control target-input"
-            placeholder="Masukkan suhu baru">
-
-        <div class="button-group mt-3">
-            <button type="submit" class="btn btn-light w-100 btn-update">
-                Update
-            </button>
-        </div>
-    </form>
-
-</div>
-
+                        <button id="servoOn" class="btn btn-success w-100 mt-2">Servo ON</button>
+                        <button id="servoOff" class="btn btn-danger w-100 mt-2">Servo OFF</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             $(document).ready(function () {
+
                 function getData() {
                     $.ajax({
                         type: "GET",
                         url: "/get-data",
                         success: function (response) {
-                            let temperature = response.temperature;
-                            let humidity = response.humidity;
-                            $("#temperature").text(temperature);
-                            $("#humidity").text(humidity);
+
+                            // Update suhu
+                            $("#temperature").text(response.temperature);
+                            $("#humidity").text(response.humidity);
+
+                            // Update LED
                             $("#ledStatus").text(response.led == 1 ? "ON" : "OFF");
+
+                            // Update Buzzer
                             $("#buzzerStatus").text(response.buzzer == 1 ? "ON" : "OFF");
+
+                            // Update Servo
+                            $("#servoStatus").text(response.servo == 1 ? "ON" : "OFF");
+
                         }
                     });
                 }
-                setInterval(() => {
-                    getData();
-                }, 2000);
-            });
-        </script>
-        <script>
-            $("#btnSet").click(function () {
-                $.ajax({
-                    type: "POST",
-                    url: "/control",
-                    data: {
-                        target_temperature: $("#target").val(),
-                    },
-                    success: function () {
-                        alert("Suhu kontrol diperbarui!");
-                    }
+
+                // Refresh data tiap 2 detik
+                setInterval(getData, 2000);
+
+                // Tombol set suhu
+                $("#btnSet").click(function () {
+                    $.ajax({
+                        type: "POST",
+                        url: "/control",
+                        data: {
+                            target_temperature: $("#target").val(),
+                        },
+                        success: function () {
+                            alert("Suhu kontrol diperbarui!");
+                        }
+                    });
                 });
+
+                // Tombol Servo ON
+                $("#servoOn").click(function () {
+                    $.get('/update-servo/1', function () {
+                        $("#servoStatus").text("ON");  // update langsung di view
+                        alert("Servo ON!");
+                    });
+                });
+
+                // Tombol Servo OFF
+                $("#servoOff").click(function () {
+                    $.get('/update-servo/0', function () {
+                        $("#servoStatus").text("OFF"); // update langsung di view
+                        alert("Servo OFF!");
+                    });
+                });
+
+
             });
         </script>
+
     </body>
 </html>

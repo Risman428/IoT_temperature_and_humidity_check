@@ -18,3 +18,6 @@ Route::post('/control', [Dht22Controller::class, 'setControl']);
 Route::get('/control', [Dht22Controller::class, 'getControl']);
 //route pengambilan data status LED dan Buzzer
 Route::get('/update-device/{led}/{buzzer}', [Dht22Controller::class, 'updateDevice']);
+//route control servo di laravel
+Route::get('/update-servo/{status}', [Dht22Controller::class, 'updateServo']);
+Route::get('/servo-control', [Dht22Controller::class, 'servoControl']);
