@@ -10,9 +10,11 @@ Route::get('/', function () {
     return view('welcome', compact('dht'));
 });
 
-
+// route pengambilan data temperature and humidity
 Route::get('/update-data/{tmp}/{hmd}', [Dht22Controller::class, 'updateData']);
 Route::get('/get-data', [Dht22Controller::class, 'getData']); 
-
+//route control input manual di laravel
 Route::post('/control', [Dht22Controller::class, 'setControl']);
 Route::get('/control', [Dht22Controller::class, 'getControl']);
+//route pengambilan data status LED dan Buzzer
+Route::get('/update-device/{led}/{buzzer}', [Dht22Controller::class, 'updateDevice']);

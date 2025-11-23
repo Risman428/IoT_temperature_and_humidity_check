@@ -162,11 +162,14 @@
                 font-weight: 600;
             }
 
-            .btn-reset {
-                border-radius: 15px !important;
-                font-weight: 600;
+            .led-buzzer-row {
+                display: flex;
+                gap: 15px; /* jarak antar kolom */
             }
 
+            .led-buzzer-row .previous-target-box {
+                flex: 1;   /* bikin ukuran kedua kolom sama */
+            }
 
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(20px); }
@@ -206,6 +209,19 @@
             {{ $dht->target_temperature ?? 'Belum ada data' }}
         </span> °C
     </div>
+    <!-- Container untuk LED dan Buzzer -->
+    <div class="led-buzzer-row">
+        <div class="previous-target-box">
+            <h5>LED</h5>
+            <p><span id="ledStatus" class="previous-target-value"></span></p>
+        </div>
+
+        <div class="previous-target-box">
+            <h5>Buzzer</h5>
+            <p><span id="buzzerStatus" class="previous-target-value"></span></p>
+        </div>
+    </div>
+
 
     {{-- FORM UPDATE TARGET --}}
     <form action="/control" method="POST">
@@ -240,6 +256,8 @@
                             let humidity = response.humidity;
                             $("#temperature").text(temperature);
                             $("#humidity").text(humidity);
+                            $("#ledStatus").text(response.led == 1 ? "ON" : "OFF");
+                            $("#buzzerStatus").text(response.buzzer == 1 ? "ON" : "OFF");
                         }
                     });
                 }

@@ -20,6 +20,7 @@ class Dht22Controller extends Controller
         }
     }
 
+    //ini untuk menyimpan data suhu yang di input manual
     public function index()
     {
         $dht = Dht22::first(); // ambil data pertama di tabel
@@ -40,11 +41,31 @@ class Dht22Controller extends Controller
         return response()->json(['message' => 'Data updated successfully']);
     }
 
+    //UpdateData led & buzzer
+    public function updateDevice($led, $buzzer)
+    {
+        $dht = Dht22::first();
+
+        $dht->led = $led;
+        $dht->buzzer = $buzzer;
+        $dht->save();
+
+        return response()->json(['message' => 'Device status updated']);
+    }
+
+
     // Ambil data sensor
     public function getData()
     {
         $dht = Dht22::first();
-        return response()->json($dht);   
+
+        return response()->json([
+            'temperature' => $dht->temperature,
+            'humidity' => $dht->humidity,
+            'target_temperature' => $dht->target_temperature,
+            'led' => $dht->led,
+            'buzzer' => $dht->buzzer,
+        ]);
     }
 
     // Form POST dari web (tanpa JSON)
