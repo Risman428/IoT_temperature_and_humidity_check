@@ -15,11 +15,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Seeder default user
+        User::factory(10)->create();
 
         User::factory()->create([
-            'name' => 'Test User',
+            'name'  => 'Test User',
             'email' => 'test@example.com',
+        ]);
+
+        // ➕ Tambahkan seeder lampu di sini
+        $this->call([
+            SwitchLampSeeder::class,
         ]);
     }
 }

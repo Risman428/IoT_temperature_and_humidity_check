@@ -17,7 +17,17 @@
                 font-family: "Poppins", sans-serif;
                 overflow: hidden;
                 position: relative;
+                display: flex;
+                justify-content: center;
+                width: 100%;
             }
+
+            .main-wrapper {
+                max-width: 1400px;
+                width: 100%;
+                margin: auto;
+            }
+
 
             @keyframes gradientShift {
                 0% { background-position: 0% 50%; }
@@ -120,7 +130,7 @@
             }
 
             .row .card {
-                max-width: 280px;
+                max-width: 1500px;
             }
 
             .container {
@@ -175,6 +185,74 @@
                 from { opacity: 0; transform: translateY(20px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+
+            #lampControl {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr); /* 2 kolom */
+                gap: 20px;
+                justify-items: center; /* biar semua switch berada di tengah */
+                width: 100%;
+            }
+
+            .switch-wrapper {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 30px;
+            }
+
+            .switch {
+                position: relative;
+                display: inline-block;
+                width: 70px;
+                height: 34px;
+            }
+
+            .switch input { display: none; }
+
+            .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #d9534f; /* merah OFF */
+                transition: .4s;
+                border-radius: 34px;
+            }
+
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 26px;
+                width: 26px;
+                left: 4px;
+                bottom: 4px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+            }
+
+            input:checked + .slider {
+                background-color: #28a745; /* hijau ON */
+            }
+
+            input:checked + .slider:before {
+                transform: translateX(36px);
+            }
+
+            .slider-text {
+                position: relative;
+                display: block;
+                margin-top: -5px; /* turunkan supaya tidak tabrakan */
+                margin-bottom: 8px;
+                text-align: center;
+                font-size: 14px;
+                font-weight: 700;
+                color: white;
+            }
+
         </style>
     </head>
     <body>
@@ -184,72 +262,93 @@
         <div class="particle" style="top:70%; left:50%; animation-delay:4s;"></div>
         <div class="particle" style="top:50%; left:10%; animation-delay:6s;"></div>
 
+    <div class="main-wrapper">
+    <!-- seluruh container py-5 di sini -->
         <div class="container py-5">
-            <h1 class="text-center mb-3">Monitoring DHT22 Sensor</h1>
             <div class="row justify-content-center">
-                <div class="card col-3 mx-2 temperature">
-                    <i class="bi bi-thermometer-sun icon"></i>
-                    <h5>Temperature</h5>
-                    <p><span id="temperature"></span> °C</p>
-                </div>
-                <div class="card col-3 mx-2 humidity">
-                    <i class="bi bi-droplet-half icon"></i>
-                    <h5>Humidity</h5>
-                    <p><span id="humidity"></span> %</p>
-                </div>
-            </div>
-            <div class="d-flex justify-content-center gap-3 mt-4">
-                <div class="card p-4" style="max-width:350px; flex:1;">
-                    <h5 class="mb-3">Set Target Suhu</h5>
-                    {{-- INFORMASI TARGET SEBELUMNYA --}}
-                    <div class="previous-target-box">
-                        <strong>Target suhu sebelumnya:</strong><br>
-                        <span class="previous-target-value">
-                            {{ $dht->target_temperature ?? 'Belum ada data' }}
-                        </span> °C
-                    </div>
-                    <!-- Container untuk LED dan Buzzer -->
-                    <h5 class="mb-3">Status LED & Buzzer</h5>
-                    <div class="led-buzzer-row">
-                        <div class="previous-target-box">
-                            <h5>LED</h5>
-                            <p><span id="ledStatus" class="previous-target-value"></span></p>
-                        </div>
 
-                        <div class="previous-target-box">
-                            <h5>Buzzer</h5>
-                            <p><span id="buzzerStatus" class="previous-target-value"></span></p>
+                <!-- BAGIAN MONITORING -->
+                <div class="col-lg-6">
+                    <h1 class="text-center mb-3">Monitoring DHT22 Sensor</h1>
+
+                    <div class="row justify-content-center">
+                        <div class="card col-5 mx-2 temperature">
+                            <i class="bi bi-thermometer-sun icon"></i>
+                            <h5>Temperature</h5>
+                            <p><span id="temperature"></span> °C</p>
+                        </div>
+                        <div class="card col-5 mx-2 humidity">
+                            <i class="bi bi-droplet-half icon"></i>
+                            <h5>Humidity</h5>
+                            <p><span id="humidity"></span> %</p>
                         </div>
                     </div>
 
-                    {{-- FORM UPDATE TARGET --}}
-                    <form action="/control" method="POST">
-                        @csrf
-                        <input 
-                            type="number" 
-                            name="target_temperature"
-                            class="form-control target-input"
-                            placeholder="Masukkan suhu baru">
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <div class="card p-4" style="max-width:350px; flex:1;">
+                            <h5 class="mb-3">Set Target Suhu</h5>
 
-                        <div class="button-group mt-3">
-                            <button type="submit" class="btn btn-light w-100 btn-update">
-                                Update
-                            </button>
+                            <div class="previous-target-box">
+                                <strong>Target suhu sebelumnya:</strong><br>
+                                <span class="previous-target-value">
+                                    {{ $dht->target_temperature ?? 'Belum ada data' }}
+                                </span> °C
+                            </div>
+
+                            <h5 class="mb-3">Status LED & Buzzer</h5>
+                            <div class="led-buzzer-row">
+                                <div class="previous-target-box">
+                                    <h5>LED</h5>
+                                    <p><span id="ledStatus" class="previous-target-value"></span></p>
+                                </div>
+                                <div class="previous-target-box">
+                                    <h5>Buzzer</h5>
+                                    <p><span id="buzzerStatus" class="previous-target-value"></span></p>
+                                </div>
+                            </div>
+
+                            <form action="/control" method="POST">
+                                @csrf
+                                <input type="number" name="target_temperature" class="form-control target-input" placeholder="Masukkan suhu baru">
+                                <div class="button-group mt-3">
+                                    <button type="submit" class="btn btn-light w-100 btn-update">Update</button>
+                                </div>
+                            </form>
                         </div>
-                    </form>
-                </div>
 
-                <div class="card p-4" style="max-width:350px; flex:1;">
-                    <div class="previous-target-box mt-3">
-                        <h5>SERVO</h5>
-                        <p><span id="servoStatus" class="previous-target-value"></span></p>
-
-                        <button id="servoOn" class="btn btn-success w-100 mt-2">Servo ON</button>
-                        <button id="servoOff" class="btn btn-danger w-100 mt-2">Servo OFF</button>
+                        <div class="card p-4" style="max-width:350px; flex:1;">
+                            <div class="previous-target-box mt-3">
+                                <h5>SERVO</h5>
+                                <p><span id="servoStatus" class="previous-target-value"></span></p>
+                                <button id="servoOn" class="btn btn-success w-100 mt-2">Servo ON</button>
+                                <button id="servoOff" class="btn btn-danger w-100 mt-2">Servo OFF</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- BAGIAN CONTROL LAMPU -->
+                <div class="col-lg-6">
+                    <div class="card p-4 mt-5">
+                        <h5 class="mb-3 text-center">Control Lampu</h5>
+
+                        <div class="row justify-content-center text-center" id="lampControl">
+                            <script>
+                                const buttonLabels = ["Lampu 1", "Lampu 2", "Lampu 3", "Lampu 4", "Lampu 5", "Lampu 6"];
+                            </script>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
+    </div>
+
+       
+
+
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
@@ -273,7 +372,7 @@
                             $("#buzzerStatus").text(response.buzzer == 1 ? "ON" : "OFF");
 
                             // Update Servo
-                            $("#servoStatus").text(response.servo == 1 ? "ON" : "OFF");
+                            $("#servoStatus").text(response.servo == 1 ? "Garasi Terbuka" : "Garasi Tertutup");
 
                         }
                     });
@@ -300,7 +399,7 @@
                 $("#servoOn").click(function () {
                     $.get('/update-servo/1', function () {
                         $("#servoStatus").text("ON");  // update langsung di view
-                        alert("Servo ON!");
+                        // alert("Garasi Terbuka!");
                     });
                 });
 
@@ -308,8 +407,85 @@
                 $("#servoOff").click(function () {
                     $.get('/update-servo/0', function () {
                         $("#servoStatus").text("OFF"); // update langsung di view
-                        alert("Servo OFF!");
+                        // alert("Garasi Tertutup!");
                     });
+                });
+
+
+                //==================== SWITCH LAMPU ====================
+                function loadLampStatus() {
+                    $.ajax({
+                        type: "GET",
+                        url: "/lamp",
+                        success: function(res) {
+
+                            for (let i = 1; i <= 6; i++) {
+                                let status = res[`lampu${i}`] ?? "off";
+
+                                $(`#lampStatus${i}`).text(status.toUpperCase());
+                                $(`#label${i}`).text(status === "on" ? "ON" : "OFF");
+                                $(`#lampu${i}`).prop("checked", status === "on");
+                            }
+                        }
+                    });
+                }
+
+
+
+
+                // Buat tombol dinamis sesuai 6 lampu
+                $(function() {
+                    const lampControl = document.getElementById("lampControl");
+                    // Render switch ke halaman
+                    for (let i = 1; i <= 6; i++) {
+                        $("#lampControl").append(`
+                            <div class="switch-wrapper">
+                                <span class="slider-text" id="label${i}">Lampu ${i}</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="lamp${i}">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        `);
+
+                        // Event ON/OFF
+                        $('#lamp' + i).change(function () {
+                            let status = $(this).is(':checked') ? 'on' : 'off';
+
+                            $.get(`/lamp/lampu${i}?status=${status}`, function (res) {
+                                $('#label' + i).text("Lampu " + i + " (" + res.status.toUpperCase() + ")");
+                            });
+                        });
+                    }
+
+                    // Load status awal
+                    function loadLampStatus() {
+                        $.get('/lamp', function(res) {
+                            for (let i = 1; i <= 6; i++) {
+                                let status = res['lampu' + i];
+                                $('#lamp' + i).prop('checked', status === 'on');
+                                $('#label' + i).text("Lampu " + i + " (" + status.toUpperCase() + ")");
+                            }
+                        });
+                    }
+
+                    loadLampStatus();                 // --- Update status pertama kali
+                    setInterval(loadLampStatus, 3000);
+
+                    // klik tombol lampu
+                    $(document).on("change", ".toggleLamp", function () {
+                        let id = $(this).data("id");
+                        let current = $(this).is(":checked") ? "on" : "off";
+
+                        $.ajax({
+                            type: "GET",
+                            url: `/lamp/lampu${id}?status=${current}`,
+                            success: function() {
+                                loadLampStatus();
+                            }
+                        });
+                    });
+
                 });
 
 
