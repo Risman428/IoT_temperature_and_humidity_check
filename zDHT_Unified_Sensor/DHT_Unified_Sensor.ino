@@ -6,8 +6,8 @@
 #include <Servo.h>
 
 // WiFi config
-const char* ssid = "HANIF";
-const char* password = "H@n1f16_";
+const char* ssid = "Y30i";
+const char* password = "12345678";
 
 // Pin config
 #define DHTPIN D1
@@ -16,9 +16,11 @@ const char* password = "H@n1f16_";
 #define SERVOPIN D5
 
 DHT_Unified dht(DHTPIN, DHTTYPE);
-uint32_t delayMS;
-// Object servo
 Servo myServo;
+
+// Timer non-blocking
+unsigned long lastSensorTime = 0;
+const unsigned long sensorInterval = 500;  // 0.5 detik
 
 void setup() {
   Serial.begin(115200);
@@ -27,7 +29,7 @@ void setup() {
   Serial.println("Menghubungkan ke WiFi...");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(300);
     Serial.print(".");
   }
   Serial.println("\nWiFi Connected!");
@@ -38,138 +40,122 @@ void setup() {
   pinMode(LEDPIN, OUTPUT);
   digitalWrite(LEDPIN, LOW);
 
-  // 🎯 SERVO SETUP
-  myServo.attach(SERVOPIN);     // gunakan pin D5
-  myServo.write(0);  
-
-  delayMS = 2000;
+  // Servo setup
+  myServo.attach(SERVOPIN);
+  myServo.write(0);
 }
 
 void loop() {
-  delay(delayMS);
 
-  // ---- 1️⃣ Baca Sensor ----
-  sensors_event_t tempEvent, humEvent;
-  dht.temperature().getEvent(&tempEvent);
-  dht.humidity().getEvent(&humEvent);
+  unsigned long now = millis();
 
-  float temperature = tempEvent.temperature;
-  float humidity = humEvent.relative_humidity;
+  // ====================================================================
+  // 1️⃣ SENSOR UPDATE SETIAP 0.5 DETIK (NON BLOCKING)
+  // ====================================================================
+  static float temperature = 0;
+  static float humidity = 0;
+  static float target = 0;
+  bool finalLed = false;
+  bool buzzer = false;
 
-  if (isnan(temperature) || isnan(humidity)) {
-    Serial.println("Gagal membaca sensor DHT");
-    return;
-  }
+  if (now - lastSensorTime >= sensorInterval) {
+    lastSensorTime = now;
 
-  Serial.print("Temperature: ");
-  Serial.println(temperature);
-  Serial.print("Humidity: ");
-  Serial.println(humidity);
+    // ---- Baca Sensor ----
+    sensors_event_t tempEvent, humEvent;
+    dht.temperature().getEvent(&tempEvent);
+    dht.humidity().getEvent(&humEvent);
 
-  // ---- 2️⃣ KIRIM DATA SENSOR KE LARAVEL ----
-  if (WiFi.status() == WL_CONNECTED) {
-    WiFiClient client;
-    HTTPClient http1;
+    if (!isnan(tempEvent.temperature)) temperature = tempEvent.temperature;
+    if (!isnan(humEvent.relative_humidity)) humidity = humEvent.relative_humidity;
 
-    String url = "http://192.168.1.4/dhtiot/public/update-data/";
-    url += String(temperature) + "/" + String(humidity);
+    Serial.print("Temperature: ");
+    Serial.println(temperature);
+    Serial.print("Humidity: ");
+    Serial.println(humidity);
 
-    http1.begin(client, url);
-    int code = http1.GET();
+    // ---- KIRIM DATA SENSOR KE LARAVEL ----
+    if (WiFi.status() == WL_CONNECTED) {
+      WiFiClient client;
+      HTTPClient http1;
 
-    if (code > 0) {
-      Serial.println("Sensor sent to Laravel");
-    } else {
-      Serial.println("Gagal update-data");
+      String url = "http://10.97.96.49/dhtiot/public/update-data/";
+      url += String(temperature) + "/" + String(humidity);
+
+      http1.begin(client, url);
+      http1.GET();
+      http1.end();
     }
-    http1.end();
-  }
 
-  // ---- 3️⃣ Ambil target suhu dari Laravel ----
-  float target = 0;
+    // ---- Ambil target suhu dari Laravel ----
+    if (WiFi.status() == WL_CONNECTED) {
+      WiFiClient client2;
+      HTTPClient http2;
 
-  if (WiFi.status() == WL_CONNECTED) {
-    WiFiClient client2;
-    HTTPClient http2;
+      http2.begin(client2, "http://10.97.96.49/dhtiot/public/control");
+      int code = http2.GET();
 
-    http2.begin(client2, "http://192.168.1.4/dhtiot/public/control");
-    int httpCode = http2.GET();
+      if (code > 0) {
+        String payload = http2.getString();
 
-    if (httpCode > 0) {
-      String payload = http2.getString();
-      Serial.println("Control Data: " + payload);
-
-      int index = payload.indexOf("target_temperature");
-      if (index != -1) {
-        int colon = payload.indexOf(":", index);
-        int comma = payload.indexOf(",", colon);
-
-        String value;
-
-        if (comma != -1)
-          value = payload.substring(colon + 1, comma);
-        else
-          value = payload.substring(colon + 1);
-
-        value.trim();
-        target = value.toFloat();
-
-        Serial.print("Target suhu dari web: ");
-        Serial.println(target);
+        int index = payload.indexOf("target_temperature");
+        if (index != -1) {
+          int colon = payload.indexOf(":", index);
+          int comma = payload.indexOf(",", colon);
+          String value = (comma != -1)
+                       ? payload.substring(colon + 1, comma)
+                       : payload.substring(colon + 1);
+          value.trim();
+          target = value.toFloat();
+        }
       }
-    } else {
-      Serial.println("Gagal ambil control");
+      http2.end();
     }
 
-    http2.end();
+    // ---- LED dan Buzzer ----
+    bool autoLed = (temperature >= 30);
+    bool overrideLed = (target >= 30);
+    finalLed = autoLed || overrideLed;
+
+    digitalWrite(LEDPIN, finalLed ? HIGH : LOW);
+
+    buzzer = finalLed;
+
+    Serial.println("-------------------------------------");
+    Serial.println(finalLed ? "LED : ON" : "LED : OFF");
+    Serial.println(buzzer ? "Buzzer : ON" : "Buzzer : OFF");
+    Serial.println("-------------------------------------");
+
+    // ---- Update status LED & buzzer ke Laravel ----
+    if (WiFi.status() == WL_CONNECTED) {
+      WiFiClient client3;
+      HTTPClient http3;
+
+      String urlStatus = "http://10.97.96.49/dhtiot/public/update-device/";
+      urlStatus += String(finalLed ? 1 : 0) + "/";
+      urlStatus += String(buzzer ? 1 : 0);
+
+      http3.begin(client3, urlStatus);
+      http3.GET();
+      http3.end();
+    }
   }
 
-  // ---- 4️⃣ Penentuan LED final ----
-  bool autoLed = (temperature >= 30);   // Sensor ON ≥ 30
-  bool overrideLed = (target >= 30);    // Control Laravel ON ≥ 30
-  bool finalLed = autoLed || overrideLed;
-
-  digitalWrite(LEDPIN, finalLed ? HIGH : LOW);
-
-  Serial.println("-------------------------------------");
-
-  // ---- 5️⃣ Kirim status LED & Buzzer ke Laravel ----
-  bool buzzer = finalLed;  // contoh: buzzer mengikuti LED
-
-  if (WiFi.status() == WL_CONNECTED) {
-    WiFiClient client3;
-    HTTPClient http3;
-
-    String urlStatus = "http://192.168.1.4/dhtiot/public/update-device/";
-    urlStatus += String(finalLed ? 1 : 0) + "/";
-    urlStatus += String(buzzer ? 1 : 0);
-
-    http3.begin(client3, urlStatus);
-    int code3 = http3.GET();
-    Serial.println(code3 > 0 ? "Status sent" : "Gagal kirim status");
-    http3.end();
-  }
-
-  // TAMPILKAN STATUS DI SERIAL
-  Serial.println(finalLed ? "LED : ON" : "LED : OFF");
-  Serial.println(buzzer ? "Buzzer : ON" : "Buzzer : OFF");
-  Serial.println("-------------------------------------");
-
-    // ---- 6️⃣ Ambil status servo dari Laravel ----
+  // ====================================================================
+  // 2️⃣ SERVO REAL-TIME (TANPA DELAY)
+  // ====================================================================
   int servoState = 0;
 
   if (WiFi.status() == WL_CONNECTED) {
     WiFiClient client4;
     HTTPClient http4;
 
-    http4.begin(client4, "http://192.168.1.4/dhtiot/public/servo-control");
+    http4.begin(client4, "http://10.97.96.49/dhtiot/public/servo-control");
     int httpCode4 = http4.GET();
 
     if (httpCode4 > 0) {
       String payload = http4.getString();
-      Serial.println("Servo Control: " + payload);
 
-      // asumsi respon: {"servo":1}
       int idx = payload.indexOf("servo");
       if (idx != -1) {
         int colon = payload.indexOf(":", idx);
@@ -179,13 +165,10 @@ void loop() {
     http4.end();
   }
 
-  // ---- 7️⃣ Gerakkan servo ----
+  // Gerakkan servo tanpa delay
   if (servoState == 1) {
-    myServo.write(90);     // ON → 90 derajat
-    Serial.println("Servo : ON (90°)");
+    myServo.write(180);
   } else {
-    myServo.write(0);      // OFF → balik ke 0°
-    Serial.println("Servo : OFF (0°)");
+    myServo.write(0);
   }
-
 }
